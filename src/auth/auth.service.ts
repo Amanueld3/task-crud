@@ -1,27 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthPayloadDto } from './dto/auth.dto';
+import { PrismaService } from 'prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
-const fakeUsers = [
-  { id: 1, username: 'admin', password: 'admin' },
-  { id: 2, username: 'user', password: 'user' },
-];
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private prismaService: PrismaService, // Inject PrismaService
+  ) {}
 
-  validateUser({ username, password }: AuthPayloadDto) {
-    const findUser = fakeUsers.find(
-      (user) => user.username === username && user.password === password,
-    );
+  async validateUser({ username, password }: AuthPayloadDto) {
+    // Query the database for the user by username
+    const user = await this.prismaService.user.findUnique({
+      where: { username },
+    });
 
-    if (!findUser) return null;
+    if (!user) return null;
 
-    if (password === findUser.password) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...result } = findUser;
-      return this.jwtService.sign(result);
-    }
-    return null;
+    // Assume the password is hashed, compare hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
+
+    if (!isPasswordValid) return null;
+
+    const { hashedPassword: userPassword, ...result } = user;
+    return this.jwtService.sign(result); // Sign the JWT without the password
   }
 }
