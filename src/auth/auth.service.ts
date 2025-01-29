@@ -24,6 +24,7 @@ export class AuthService {
 
     if (!isPasswordValid) return null;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { hashedPassword: userPassword, ...result } = user;
     return this.jwtService.sign(result); // Sign the JWT without the password
   }
